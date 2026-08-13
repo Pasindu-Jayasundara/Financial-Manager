@@ -31,10 +31,14 @@ const startServer = (port) => {
   });
 };
 
-startServer(Number(process.env.PORT || 5000));
+if (!process.env.VERCEL) {
+  startServer(Number(process.env.PORT || 5000));
 
-connectDB().then((connected) => {
-  if (!connected) console.warn('API server is running, but database-backed endpoints will return 503 until MongoDB reconnects.');
-}).catch((error) => {
-  console.error('MongoDB initialization failed:', error.message);
-});
+  connectDB().then((connected) => {
+    if (!connected) console.warn('API server is running, but database-backed endpoints will return 503 until MongoDB reconnects.');
+  }).catch((error) => {
+    console.error('MongoDB initialization failed:', error.message);
+  });
+}
+
+module.exports = app;
