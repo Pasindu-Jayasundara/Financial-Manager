@@ -11,10 +11,13 @@ const GoalSchema = new mongoose.Schema({
   matchedJobs: [{
     role: String,
     industry: String,
+    category: String,
+    location: String,
     estimatedSalary: Number,
     requiredSkills: [String],
     gapSkills: [String],
-    matchPercentage: Number
+    matchPercentage: Number,
+    applicationUrl: String
   }],
   createdAt: { type: Date, default: Date.now }
 });

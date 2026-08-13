@@ -19,7 +19,7 @@ const getGoalAndRoadmap = async (req, res) => {
 
       const targetIncome = currentIncome > 0 ? Math.round(currentIncome * 1.25) : 100000;
       const initialSkills = ['JavaScript', 'Python'];
-      const matchedJobs = generateJobMatches(initialSkills, targetIncome);
+      const matchedJobs = await generateJobMatches(initialSkills, targetIncome);
 
       goal = await Goal.create({
         tenantId: req.tenantId,
@@ -37,12 +37,13 @@ const getGoalAndRoadmap = async (req, res) => {
 
     // Auto-generate roadmaps if missing or empty
     if (!roadmaps || roadmaps.length === 0) {
-      const roadmapItems = buildRoadmap(goal);
+      const roadmapItems = buildRoadmap(goal, goal.matchedJobs || []);
       roadmaps = await Roadmap.insertMany(roadmapItems);
     }
 
     res.json({ goal, roadmaps });
   } catch (error) {
+    console.error('Error in getGoalAndRoadmap:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -65,7 +66,7 @@ const updateGoalSkills = async (req, res) => {
 
     const skillsToUse = update.declaredSkills !== undefined ? update.declaredSkills : (existingGoal?.declaredSkills || []);
     const targetIncToUse = update.targetIncome !== undefined ? update.targetIncome : (existingGoal?.targetIncome || 100000);
-    update.matchedJobs = generateJobMatches(skillsToUse, targetIncToUse);
+    update.matchedJobs = await generateJobMatches(skillsToUse, targetIncToUse);
 
     const goal = await Goal.findOneAndUpdate(
       { tenantId: req.tenantId, userId: req.user._id },
@@ -73,12 +74,13 @@ const updateGoalSkills = async (req, res) => {
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
 
-    // Regenerate roadmap tasks to reflect updated target income and declared skills
+    // Regenerate roadmap tasks to reflect updated target income, declared skills, and live opportunities
     await Roadmap.deleteMany({ tenantId: req.tenantId });
-    const roadmaps = await Roadmap.insertMany(buildRoadmap(goal));
+    const roadmaps = await Roadmap.insertMany(buildRoadmap(goal, goal.matchedJobs || []));
 
     res.json({ goal, roadmaps });
   } catch (error) {
+    console.error('Error in updateGoalSkills:', error);
     res.status(500).json({ message: error.message });
   }
 };

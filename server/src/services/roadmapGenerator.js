@@ -1,46 +1,10 @@
-const generateJobMatches = (declaredSkills = [], targetIncome = 100000) => {
-  const userSkills = declaredSkills.map(s => String(s).trim().toLowerCase());
-  const skillList = declaredSkills.length > 0 ? declaredSkills : ['General Professional'];
+const { getMatchingOpportunities } = require('./externalOpportunityService');
 
-  const catalog = [
-    {
-      role: 'Full-Stack Developer',
-      industry: 'Software & Technology',
-      baseSalary: Math.max(targetIncome, 95000),
-      required: ['JavaScript', 'React', 'Node.js', 'MongoDB', 'Git']
-    },
-    {
-      role: 'Backend / Data Engineer',
-      industry: 'Fintech & Cloud Systems',
-      baseSalary: Math.max(Math.round(targetIncome * 1.1), 110000),
-      required: ['Python', 'SQL', 'AWS', 'Docker', 'API Design']
-    },
-    {
-      role: 'Technical Product Specialist',
-      industry: 'Enterprise Solutions',
-      baseSalary: Math.max(Math.round(targetIncome * 0.95), 85000),
-      required: ['Project Management', 'Data Analysis', 'SQL', 'Communication']
-    }
-  ];
-
-  return catalog.map(job => {
-    const matched = job.required.filter(req => userSkills.some(us => us.includes(req.toLowerCase()) || req.toLowerCase().includes(us)));
-    const gapSkills = job.required.filter(req => !userSkills.some(us => us.includes(req.toLowerCase()) || req.toLowerCase().includes(us)));
-    const matchPercentage = declaredSkills.length > 0 
-      ? Math.min(95, Math.max(45, Math.round((matched.length / job.required.length) * 100)))
-      : 60;
-    return {
-      role: job.role,
-      industry: job.industry,
-      estimatedSalary: job.baseSalary,
-      requiredSkills: job.required,
-      gapSkills: gapSkills.length > 0 ? gapSkills : ['Advanced Architecture'],
-      matchPercentage
-    };
-  });
+const generateJobMatches = async (declaredSkills = [], targetIncome = 100000) => {
+  return await getMatchingOpportunities(declaredSkills, targetIncome);
 };
 
-const buildRoadmap = (goal) => {
+const buildRoadmap = (goal, liveOpps = []) => {
   const months = Math.max(1, Math.min(Number(goal.targetMonths) || 12, 12));
   const currentInc = Number(goal.currentIncome || 0);
   const targetInc = Number(goal.targetIncome || 100000);
@@ -55,13 +19,20 @@ const buildRoadmap = (goal) => {
   const s2 = skills[1] || 'Secondary Skill';
   const s3 = skills[2] || 'Advanced Skill';
 
+  // Extract live opportunities for embedding in roadmap tasks
+  const oppList = Array.isArray(liveOpps) && liveOpps.length > 0 ? liveOpps : (goal.matchedJobs || []);
+  const opp1 = oppList[0];
+  const opp2 = oppList[1] || oppList[0];
+  const opp3 = oppList[2] || oppList[0];
+
   const monthlyTemplates = [
     {
       title: `Month 1: Foundation & ${s1} Skill Audit`,
       tasks: [
         { text: `Audit baseline competence in ${s1} and document skill gaps`, category: 'Skill Acquisition' },
         { text: `Calculate monthly net cashflow & allocate emergency reserve`, category: 'Savings Target' },
-        { text: `Update profile with target income goal of Rs. ${targetInc.toLocaleString()}`, category: 'Career Strategy' }
+        { text: `Set target monthly income goal to Rs. ${targetInc.toLocaleString()}`, category: 'Career Strategy' },
+        ...(opp1 ? [{ text: `Explore opportunity requirements for "${opp1.role}" (${opp1.category || 'Job/Internship'})`, category: 'Career Strategy' }] : [])
       ]
     },
     {
@@ -69,7 +40,7 @@ const buildRoadmap = (goal) => {
       tasks: [
         { text: `Build a practical hands-on portfolio project using ${s1}`, category: 'Skill Acquisition' },
         { text: `Optimize savings rate toward your monthly reserve target`, category: 'Savings Target' },
-        { text: `Join 2 professional communities relevant to ${s1}`, category: 'Networking' }
+        { text: `Join professional communities & technical forums relevant to ${s1}`, category: 'Networking' }
       ]
     },
     {
@@ -77,7 +48,7 @@ const buildRoadmap = (goal) => {
       tasks: [
         { text: `Complete core tutorials & practical exercises in ${s2}`, category: 'Skill Acquisition' },
         { text: `Review budget allocation percentages and eliminate leakages`, category: 'Savings Target' },
-        { text: `Connect with 5 industry peers or recruiters on LinkedIn`, category: 'Networking' }
+        { text: `Connect with industry peers & tech leads on professional networks`, category: 'Networking' }
       ]
     },
     {
@@ -85,13 +56,15 @@ const buildRoadmap = (goal) => {
       tasks: [
         { text: `Publish completed ${s1} and ${s2} projects to GitHub / portfolio`, category: 'Skill Acquisition' },
         { text: `Lock in +Rs. ${increasePerMonth.toLocaleString()}/mo incremental savings`, category: 'Savings Target' },
-        { text: `Tailor resume and LinkedIn headline for target job roles`, category: 'Job Application' }
+        ...(opp2 ? [{ text: `Prepare application documents for role: "${opp2.role}"`, category: 'Job Application' }] : [
+          { text: `Tailor resume and portfolio for target tech roles`, category: 'Job Application' }
+        ])
       ]
     },
     {
       title: `Month 5: Technical & Problem-Solving Drills`,
       tasks: [
-        { text: `Practice technical coding / system design challenges weekly`, category: 'Skill Acquisition' },
+        { text: `Practice technical coding & system design challenges weekly`, category: 'Skill Acquisition' },
         { text: `Evaluate monthly expense trends against 5-bucket targets`, category: 'Savings Target' },
         { text: `Conduct 2 mock technical interviews with peers or mentors`, category: 'Job Application' }
       ]
@@ -99,9 +72,9 @@ const buildRoadmap = (goal) => {
     {
       title: `Month 6: Mid-Point Career Outreach & Applications`,
       tasks: [
-        { text: `Apply to 5 targeted roles offering Rs. ${targetInc.toLocaleString()}/mo`, category: 'Job Application' },
-        { text: `Re-invest incremental income into skill certifications`, category: 'Savings Target' },
-        { text: `Request referral recommendations from professional network`, category: 'Networking' }
+        { text: `Apply to targeted roles offering Rs. ${targetInc.toLocaleString()}/mo`, category: 'Job Application' },
+        ...(opp1?.applicationUrl ? [{ text: `Submit official application for "${opp1.role}" at ${opp1.applicationUrl}`, category: 'Job Application' }] : []),
+        { text: `Re-invest incremental income into skill certifications`, category: 'Savings Target' }
       ]
     },
     {
@@ -109,7 +82,7 @@ const buildRoadmap = (goal) => {
       tasks: [
         { text: `Master advanced topic in ${s3} or industry certifications`, category: 'Skill Acquisition' },
         { text: `Maintain target monthly savings rate discipline`, category: 'Savings Target' },
-        { text: `Follow up on open job applications and recruitment leads`, category: 'Job Application' }
+        { text: `Follow up on open job applications & recruitment leads`, category: 'Job Application' }
       ]
     },
     {
@@ -117,7 +90,9 @@ const buildRoadmap = (goal) => {
       tasks: [
         { text: `Complete technical assessments and screening interviews`, category: 'Job Application' },
         { text: `Audit 6-month wealth growth and income trajectory`, category: 'Savings Target' },
-        { text: `Refine value proposition and salary expectation pitch`, category: 'Career Strategy' }
+        ...(opp3 ? [{ text: `Review eligibility & requirements for "${opp3.role}"`, category: 'Career Strategy' }] : [
+          { text: `Refine value proposition and salary expectation pitch`, category: 'Career Strategy' }
+        ])
       ]
     },
     {

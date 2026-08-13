@@ -10,7 +10,7 @@ const connectDB = async () => {
     console.log(`Connecting to MongoDB at: ${uri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}...`);
 
     const conn = await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
       family: 4
     });
 
@@ -19,10 +19,7 @@ const connectDB = async () => {
     return true;
   } catch (error) {
     isConnected = false;
-    const hint = error.message.includes('querySrv ECONNREFUSED')
-      ? ' Atlas DNS SRV lookups are blocked. Allow DNS/SRV access to the cluster, or set MONGODB_URI to the standard (non-SRV) connection string from Atlas Connect.'
-      : '';
-    console.warn(`MongoDB connection failed: ${error.message}.${hint}`);
+    console.warn(`MongoDB connection failed: ${error.message}.`);
     return false;
   }
 };
