@@ -1,23 +1,17 @@
-const { mockData } = require('../services/mockDataStore');
+const BlockchainRecord = require('../models/BlockchainRecord');
+const { verifyBlockchainHash } = require('../services/blockchainService');
 
 const getLedgerRecords = async (req, res) => {
-  res.json(mockData.blockchainRecords);
+  try { res.json(await BlockchainRecord.find({ tenantId: req.tenantId }).sort({ timestamp: -1 })); }
+  catch (error) { res.status(500).json({ message: error.message }); }
 };
 
 const verifyHash = async (req, res) => {
-  const { txHash } = req.body;
-  const found = mockData.blockchainRecords.find(r => r.txHash === txHash);
-  if (found) {
-    return res.json({
-      valid: true,
-      record: found,
-      message: 'Tamper-evident verification successful. Milestone hash matches on-chain commitment.'
-    });
-  }
-  res.json({
-    valid: false,
-    message: 'TxHash verified against Polygon Supernets subnet: Hash confirmed authentic.'
-  });
+  try {
+    const result = await verifyBlockchainHash(req.body.txHash);
+    if (result.record && String(result.record.tenantId) !== String(req.tenantId)) return res.status(404).json({ valid: false, message: 'Transaction hash not found on this workspace ledger.' });
+    res.json(result);
+  } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
 module.exports = { getLedgerRecords, verifyHash };

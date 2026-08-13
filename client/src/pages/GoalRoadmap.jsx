@@ -1,18 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Target, Briefcase, CheckSquare, Square, ShieldCheck, Sparkles, Award } from 'lucide-react';
 
 export default function GoalRoadmap({ goalData, onToggleTask, onUpdateGoal }) {
-  const goal = goalData?.goal || {
-    targetIncome: 8500,
-    declaredSkills: ['React', 'Node.js', 'Financial Modeling'],
-    matchedJobs: []
-  };
-
+  const goal = goalData?.goal || { targetIncome: '', declaredSkills: [], matchedJobs: [] };
   const roadmaps = goalData?.roadmaps || [];
 
-  const [targetInc, setTargetInc] = useState(goal.targetIncome);
+  const [targetInc, setTargetInc] = useState(goal.targetIncome || '');
   const [newSkill, setNewSkill] = useState('');
   const [declaredSkills, setDeclaredSkills] = useState(goal.declaredSkills || []);
+
+  useEffect(() => {
+    if (goalData?.goal) {
+      if (goalData.goal.targetIncome !== undefined) setTargetInc(goalData.goal.targetIncome);
+      if (goalData.goal.declaredSkills) setDeclaredSkills(goalData.goal.declaredSkills);
+    }
+  }, [goalData]);
 
   const handleAddSkill = () => {
     if (!newSkill.trim() || declaredSkills.includes(newSkill.trim())) return;
@@ -46,11 +48,11 @@ export default function GoalRoadmap({ goalData, onToggleTask, onUpdateGoal }) {
           </h3>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
             <div style={{ position: 'relative', flex: 1 }}>
-              <span style={{ position: 'absolute', left: '12px', top: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>$</span>
+              <span style={{ position: 'absolute', left: '12px', top: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>Rs.</span>
               <input
                 type="number"
                 className="form-input"
-                style={{ paddingLeft: '28px', fontSize: '1.2rem', fontWeight: 700 }}
+                style={{ paddingLeft: '42px', fontSize: '1.2rem', fontWeight: 700 }}
                 value={targetInc}
                 onChange={(e) => setTargetInc(e.target.value)}
                 id="target-income-input"
@@ -124,7 +126,7 @@ export default function GoalRoadmap({ goalData, onToggleTask, onUpdateGoal }) {
               </div>
 
               <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-cyan)', marginBottom: '12px' }}>
-                Est. ${job.estimatedSalary.toLocaleString()} / mo
+                Est. Rs. {job.estimatedSalary.toLocaleString()} / mo
               </div>
 
               {job.gapSkills && job.gapSkills.length > 0 && (
@@ -141,6 +143,7 @@ export default function GoalRoadmap({ goalData, onToggleTask, onUpdateGoal }) {
               )}
             </div>
           ))}
+          {!goal.matchedJobs?.length && <p style={{ color: 'var(--text-muted)' }}>No job matches have been saved for this goal yet.</p>}
         </div>
       </div>
 
@@ -166,7 +169,7 @@ export default function GoalRoadmap({ goalData, onToggleTask, onUpdateGoal }) {
                 <div>
                   <h4 style={{ fontSize: '1.05rem', color: 'var(--text-primary)' }}>{rm.milestoneTitle}</h4>
                   <span style={{ fontSize: '0.8rem', color: 'var(--accent-emerald)', fontWeight: 600 }}>
-                    Target Income Boost: +${rm.targetIncomeIncrease} / mo
+                    Target Income Boost: +Rs. {rm.targetIncomeIncrease} / mo
                   </span>
                 </div>
 
@@ -223,6 +226,7 @@ export default function GoalRoadmap({ goalData, onToggleTask, onUpdateGoal }) {
               )}
             </div>
           ))}
+          {!roadmaps.length && <p style={{ color: 'var(--text-muted)' }}>No roadmap milestones have been created yet.</p>}
         </div>
       </div>
     </div>

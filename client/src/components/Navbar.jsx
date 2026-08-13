@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { Building2, Bell, Shield, ChevronDown, CheckCircle2 } from 'lucide-react';
 
-export default function Navbar({ tenants, activeTenantId, onSelectTenant, user, notifications }) {
+export default function Navbar({ tenants, activeTenantId, onSelectTenant, user, notifications, onLogout }) {
   const [showNotifications, setShowNotifications] = useState(false);
-  const activeTenant = tenants.find(t => t._id === activeTenantId) || tenants[0] || { name: 'Personal Workspace' };
 
   return (
     <header style={{
@@ -155,17 +154,18 @@ export default function Navbar({ tenants, activeTenantId, onSelectTenant, user, 
           </div>
           <div>
             <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-              {user?.name || 'Alex Rivera'}
+              {user?.name || 'Account'}
             </div>
             <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
               <span className="badge badge-emerald" style={{ fontSize: '0.65rem', padding: '2px 6px' }}>
-                Age {user?.age || 42}
+                Age {user?.age ?? '—'}
               </span>
               <span className="badge badge-purple" style={{ fontSize: '0.65rem', padding: '2px 6px' }}>
                 Health Risk Tier
               </span>
             </div>
           </div>
+          <button className="btn-secondary" onClick={onLogout}>Sign out</button>
         </div>
       </div>
     </header>

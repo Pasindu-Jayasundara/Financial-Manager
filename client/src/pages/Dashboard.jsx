@@ -2,20 +2,12 @@ import React from 'react';
 import { Wallet, TrendingUp, Target, ShieldCheck, HeartPulse, Sparkles, ArrowUpRight, CheckCircle2 } from 'lucide-react';
 
 export default function Dashboard({ financeData, goalData, analyticsData, notifications, setActiveTab }) {
-  const summary = financeData || { totalIncome: 6000, totalExpense: 3420, netCashflow: 2580 };
-  const dailyMotivation = notifications?.dailyMotivation || {
-    completionPct: 35,
-    message: "You are 35% closer to your $8,500 monthly target goal. Complete Month 2 Python module!",
-    suggestedNextAction: "Complete your Python for Finance module to trigger your next milestone validation."
-  };
-
-  const budget = summary.budget || {
-    savingsPct: 20,
-    loansPct: 15,
-    familyPct: 20,
-    dailyExpensesPct: 35,
-    hobbiesPct: 10
-  };
+  const summary = financeData || { totalIncome: 0, totalExpense: 0, netCashflow: 0 };
+  const goal = goalData?.goal;
+  const tasks = (goalData?.roadmaps || []).flatMap(item => item.tasks || []);
+  const completionPct = tasks.length ? Math.round((tasks.filter(task => task.completed).length / tasks.length) * 100) : 0;
+  const dailyMotivation = notifications?.[0] || { message: goal ? `Your target monthly income is Rs. ${Number(goal.targetIncome).toLocaleString()}.` : 'Add a financial goal to begin tracking your progress.' };
+  const budget = summary.budget || {};
 
   return (
     <div>
@@ -44,10 +36,10 @@ export default function Dashboard({ financeData, goalData, analyticsData, notifi
         <div style={{ marginTop: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
             <span style={{ color: '#475569', fontWeight: 600 }}>Goal Progression Pace</span>
-            <span style={{ color: '#0284c7', fontWeight: 700 }}>{dailyMotivation.completionPct}% Completed</span>
+            <span style={{ color: '#0284c7', fontWeight: 700 }}>{completionPct}% Completed</span>
           </div>
           <div className="progress-bar-bg">
-            <div className="progress-bar-fill" style={{ width: `${dailyMotivation.completionPct}%` }} />
+            <div className="progress-bar-fill" style={{ width: `${completionPct}%` }} />
           </div>
         </div>
       </div>
@@ -60,7 +52,7 @@ export default function Dashboard({ financeData, goalData, analyticsData, notifi
             <Wallet size={20} color="#0284c7" />
           </div>
           <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#0f172a' }}>
-            ${summary.totalIncome.toLocaleString()}
+            Rs. {summary.totalIncome.toLocaleString()}
           </div>
           <div style={{ fontSize: '0.78rem', color: '#059669', fontWeight: 600, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
             <ArrowUpRight size={14} /> Fixed & Variable Sources
@@ -73,7 +65,7 @@ export default function Dashboard({ financeData, goalData, analyticsData, notifi
             <TrendingUp size={20} color="#d97706" />
           </div>
           <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#0f172a' }}>
-            ${summary.totalExpense.toLocaleString()}
+            Rs. {summary.totalExpense.toLocaleString()}
           </div>
           <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>
             Across 5 Budget Buckets
@@ -86,7 +78,7 @@ export default function Dashboard({ financeData, goalData, analyticsData, notifi
             <Sparkles size={20} color="#059669" />
           </div>
           <div style={{ fontSize: '1.8rem', fontWeight: 800, color: summary.netCashflow >= 0 ? '#059669' : '#e11d48' }}>
-            ${summary.netCashflow.toLocaleString()}
+            Rs. {summary.netCashflow.toLocaleString()}
           </div>
           <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>
             Available for Goals & Savings
@@ -123,50 +115,50 @@ export default function Dashboard({ financeData, goalData, analyticsData, notifi
             <div style={{ background: 'rgba(2, 132, 199, 0.08)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(2, 132, 199, 0.18)' }}>
               <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Savings</div>
               <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0284c7', margin: '4px 0' }}>
-                {budget.savingsPct}%
+                {budget.savingsPct ?? 0}%
               </div>
               <div style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 500 }}>
-                ${Math.round(summary.totalIncome * (budget.savingsPct / 100))}
+                Rs. {Math.round(summary.totalIncome * ((budget.savingsPct ?? 0) / 100))}
               </div>
             </div>
 
             <div style={{ background: 'rgba(124, 58, 237, 0.08)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(124, 58, 237, 0.18)' }}>
               <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Loans</div>
               <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#7c3aed', margin: '4px 0' }}>
-                {budget.loansPct}%
+                {budget.loansPct ?? 0}%
               </div>
               <div style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 500 }}>
-                ${Math.round(summary.totalIncome * (budget.loansPct / 100))}
+                Rs. {Math.round(summary.totalIncome * ((budget.loansPct ?? 0) / 100))}
               </div>
             </div>
 
             <div style={{ background: 'rgba(37, 99, 235, 0.08)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(37, 99, 235, 0.18)' }}>
               <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Family</div>
               <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#2563eb', margin: '4px 0' }}>
-                {budget.familyPct}%
+                {budget.familyPct ?? 0}%
               </div>
               <div style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 500 }}>
-                ${Math.round(summary.totalIncome * (budget.familyPct / 100))}
+                Rs. {Math.round(summary.totalIncome * ((budget.familyPct ?? 0) / 100))}
               </div>
             </div>
 
             <div style={{ background: 'rgba(5, 150, 105, 0.08)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(5, 150, 105, 0.18)' }}>
               <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Daily / Health</div>
               <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#059669', margin: '4px 0' }}>
-                {budget.dailyExpensesPct}%
+                {budget.dailyExpensesPct ?? 0}%
               </div>
               <div style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 500 }}>
-                ${Math.round(summary.totalIncome * (budget.dailyExpensesPct / 100))}
+                Rs. {Math.round(summary.totalIncome * ((budget.dailyExpensesPct ?? 0) / 100))}
               </div>
             </div>
 
             <div style={{ background: 'rgba(217, 119, 6, 0.08)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(217, 119, 6, 0.18)' }}>
               <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Hobbies</div>
               <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#d97706', margin: '4px 0' }}>
-                {budget.hobbiesPct}%
+                {budget.hobbiesPct ?? 0}%
               </div>
               <div style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 500 }}>
-                ${Math.round(summary.totalIncome * (budget.hobbiesPct / 100))}
+                Rs. {Math.round(summary.totalIncome * ((budget.hobbiesPct ?? 0) / 100))}
               </div>
             </div>
           </div>
@@ -179,7 +171,7 @@ export default function Dashboard({ financeData, goalData, analyticsData, notifi
             <h3 style={{ fontSize: '1rem', color: '#0f172a', fontWeight: 700 }}>Personalization Policy</h3>
           </div>
           <p style={{ fontSize: '0.82rem', color: '#475569', lineHeight: 1.5, marginBottom: '12px' }}>
-            {summary.budget?.policyApplied?.notes || "Health-aware policy active: Carved essential buffer based on age and medical risk flags."}
+            {summary.budget?.policyApplied?.notes || 'Your allocation will appear after your profile is loaded.'}
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             <span className="badge badge-purple">Derived Health Context</span>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
@@ -7,197 +7,56 @@ import GoalRoadmap from './pages/GoalRoadmap';
 import AnalyticsForecasting from './pages/AnalyticsForecasting';
 import BlockchainLedger from './pages/BlockchainLedger';
 import PersonalizationProfile from './pages/PersonalizationProfile';
+import AuthPage from './pages/AuthPage';
+import { apiRequest } from './api';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [user, setUser] = useState({ name: 'Alex Rivera', age: 42, medicalConditions: ['chronic_condition_high_cost'] });
-  const [tenants, setTenants] = useState([
-    { _id: 'tenant_personal_1', name: 'Personal Workspace', type: 'personal' },
-    { _id: 'tenant_household_2', name: 'Rivera Household', type: 'household' }
-  ]);
-  const [activeTenantId, setActiveTenantId] = useState('tenant_personal_1');
-
-  // App Data States
+  const [token, setToken] = useState(() => localStorage.getItem('authToken'));
+  const [user, setUser] = useState(null);
+  const [tenants, setTenants] = useState([]);
+  const [activeTenantId, setActiveTenantId] = useState('');
   const [financeData, setFinanceData] = useState(null);
   const [goalData, setGoalData] = useState(null);
   const [analyticsData, setAnalyticsData] = useState(null);
-  const [notifications, setNotifications] = useState(null);
+  const [notifications, setNotifications] = useState([]);
   const [ledgerRecords, setLedgerRecords] = useState([]);
 
-  // Resilient multi-port API fetch helper
-  const apiFetch = async (endpoint, options = {}) => {
-    const headers = {
-      'Content-Type': 'application/json',
-      'x-tenant-id': activeTenantId || '',
-      ...(options.headers || {})
-    };
+  const apiFetch = useCallback(async (endpoint, options = {}) => {
+    const { response, data } = await apiRequest(endpoint, { ...options, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(activeTenantId ? { 'x-tenant-id': activeTenantId } : {}), ...(options.headers || {}) } });
+    if (response.status === 401) { localStorage.removeItem('authToken'); setToken(null); return null; }
+    if (!response.ok) throw new Error(data?.message || 'Request failed.');
+    return data;
+  }, [token, activeTenantId]);
 
-    const ports = ['', 'http://localhost:5000', 'http://localhost:5001', 'http://localhost:5002'];
+  const loadAllData = useCallback(async () => {
+    if (!token) return;
+    try {
+      const profile = await apiFetch('/api/auth/profile');
+      if (!profile) return;
+      setUser(profile.user);
+      const workspaceList = await apiFetch('/api/tenants');
+      setTenants(workspaceList || []);
+      const tenantId = activeTenantId || profile.user.defaultTenant || workspaceList?.[0]?._id;
+      if (tenantId !== activeTenantId) { setActiveTenantId(String(tenantId)); return; }
+      const [finance, goal, analytics, notices, ledger] = await Promise.all(['/api/finance/summary', '/api/goals/roadmap', '/api/analytics/forecast', '/api/notifications', '/api/blockchain/ledger'].map(apiFetch));
+      setFinanceData(finance); setGoalData(goal); setAnalyticsData(analytics); setNotifications(notices || []); setLedgerRecords(ledger || []);
+    } catch (error) { console.error(error); }
+  }, [token, apiFetch, activeTenantId]);
 
-    for (const prefix of ports) {
-      try {
-        const url = `${prefix}${endpoint}`;
-        const res = await fetch(url, { ...options, headers });
-        if (res.ok) {
-          return await res.json();
-        }
-      } catch (err) {
-        // Try next port
-      }
-    }
-    return null;
-  };
-
-  const loadAllData = async () => {
-    const prof = await apiFetch('/api/auth/profile');
-    if (prof && prof.user) {
-      setUser(prof.user);
-    }
-
-    const tens = await apiFetch('/api/tenants');
-    if (tens && tens.length > 0) {
-      setTenants(tens);
-      if (!activeTenantId) setActiveTenantId(tens[0]._id);
-    }
-
-    const fin = await apiFetch('/api/finance/summary');
-    if (fin) setFinanceData(fin);
-
-    const goal = await apiFetch('/api/goals/roadmap');
-    if (goal) setGoalData(goal);
-
-    const analytics = await apiFetch('/api/analytics/forecast');
-    if (analytics) setAnalyticsData(analytics);
-
-    const notifs = await apiFetch('/api/notifications');
-    if (notifs) setNotifications(notifs);
-
-    const ledger = await apiFetch('/api/blockchain/ledger');
-    if (ledger) setLedgerRecords(ledger);
-  };
-
-  useEffect(() => {
-    loadAllData();
-  }, [activeTenantId]);
-
-  // Handlers
-  const handleAddIncome = async (inc) => {
-    await apiFetch('/api/finance/income', { method: 'POST', body: JSON.stringify(inc) });
-    loadAllData();
-  };
-
-  const handleDeleteIncome = async (id) => {
-    await apiFetch(`/api/finance/income/${id}`, { method: 'DELETE' });
-    loadAllData();
-  };
-
-  const handleAddExpense = async (exp) => {
-    await apiFetch('/api/finance/expense', { method: 'POST', body: JSON.stringify(exp) });
-    loadAllData();
-  };
-
-  const handleDeleteExpense = async (id) => {
-    await apiFetch(`/api/finance/expense/${id}`, { method: 'DELETE' });
-    loadAllData();
-  };
-
-  const handleUpdateBudget = async (budget) => {
-    const res = await apiFetch('/api/finance/budget', { method: 'PUT', body: JSON.stringify(budget) });
-    loadAllData();
-    return res;
-  };
-
-  const handleUpdateGoal = async (data) => {
-    await apiFetch('/api/goals/goal', { method: 'PUT', body: JSON.stringify(data) });
-    loadAllData();
-  };
-
-  const handleToggleTask = async (roadmapId, taskId) => {
-    await apiFetch(`/api/goals/roadmap/${roadmapId}/task/${taskId}`, { method: 'PUT' });
-    loadAllData();
-  };
-
-  const handleVerifyHash = async (txHash) => {
-    return await apiFetch('/api/blockchain/verify', { method: 'POST', body: JSON.stringify({ txHash }) });
-  };
-
-  const handleUpdateProfile = async (data) => {
-    const res = await apiFetch('/api/auth/profile', { method: 'PUT', body: JSON.stringify(data) });
-    if (res) setUser(res);
-    loadAllData();
-  };
-
-  const handleCreateTenant = async (data) => {
-    const newT = await apiFetch('/api/tenants', { method: 'POST', body: JSON.stringify(data) });
-    if (newT) {
-      setTenants([...tenants, newT]);
-      setActiveTenantId(newT._id);
-    }
-    loadAllData();
-  };
-
-  return (
-    <div className="app-container">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      
-      <main className="main-content">
-        <Navbar
-          tenants={tenants}
-          activeTenantId={activeTenantId}
-          onSelectTenant={(id) => setActiveTenantId(id)}
-          user={user}
-          notifications={notifications?.notifications}
-        />
-
-        {activeTab === 'dashboard' && (
-          <Dashboard
-            financeData={financeData}
-            goalData={goalData}
-            analyticsData={analyticsData}
-            notifications={notifications}
-            setActiveTab={setActiveTab}
-          />
-        )}
-
-        {activeTab === 'finance' && (
-          <FinanceEngine
-            financeData={financeData}
-            onAddIncome={handleAddIncome}
-            onDeleteIncome={handleDeleteIncome}
-            onAddExpense={handleAddExpense}
-            onDeleteExpense={handleDeleteExpense}
-            onUpdateBudget={handleUpdateBudget}
-          />
-        )}
-
-        {activeTab === 'roadmap' && (
-          <GoalRoadmap
-            goalData={goalData}
-            onToggleTask={handleToggleTask}
-            onUpdateGoal={handleUpdateGoal}
-          />
-        )}
-
-        {activeTab === 'analytics' && (
-          <AnalyticsForecasting analyticsData={analyticsData} />
-        )}
-
-        {activeTab === 'blockchain' && (
-          <BlockchainLedger
-            ledgerRecords={ledgerRecords}
-            onVerifyHash={handleVerifyHash}
-          />
-        )}
-
-        {activeTab === 'profile' && (
-          <PersonalizationProfile
-            user={user}
-            tenants={tenants}
-            onUpdateProfile={handleUpdateProfile}
-            onCreateTenant={handleCreateTenant}
-          />
-        )}
-      </main>
-    </div>
-  );
+  useEffect(() => { loadAllData(); }, [loadAllData]);
+  const refresh = () => loadAllData();
+  const mutate = async (endpoint, options) => { const result = await apiFetch(endpoint, options); await refresh(); return result; };
+  const handleAuthenticated = ({ token: nextToken }) => { localStorage.setItem('authToken', nextToken); setToken(nextToken); };
+  const logout = () => { localStorage.removeItem('authToken'); setToken(null); setUser(null); setTenants([]); setActiveTenantId(''); };
+  if (!token) return <AuthPage onAuthenticated={handleAuthenticated} />;
+  if (!user) return <div className="app-container"><main className="main-content">Loading your account…</main></div>;
+  return <div className="app-container"><Sidebar activeTab={activeTab} setActiveTab={setActiveTab} /><main className="main-content"><Navbar tenants={tenants} activeTenantId={activeTenantId} onSelectTenant={setActiveTenantId} user={user} notifications={notifications} onLogout={logout} />
+    {activeTab === 'dashboard' && <Dashboard financeData={financeData} goalData={goalData} analyticsData={analyticsData} notifications={notifications} setActiveTab={setActiveTab} />}
+    {activeTab === 'finance' && <FinanceEngine financeData={financeData} onAddIncome={(data) => mutate('/api/finance/income', { method: 'POST', body: JSON.stringify(data) })} onDeleteIncome={(id) => mutate(`/api/finance/income/${id}`, { method: 'DELETE' })} onAddExpense={(data) => mutate('/api/finance/expense', { method: 'POST', body: JSON.stringify(data) })} onDeleteExpense={(id) => mutate(`/api/finance/expense/${id}`, { method: 'DELETE' })} onUpdateBudget={(data) => mutate('/api/finance/budget', { method: 'PUT', body: JSON.stringify(data) })} />}
+    {activeTab === 'roadmap' && <GoalRoadmap goalData={goalData} onToggleTask={(roadmapId, taskId) => mutate(`/api/goals/roadmap/${roadmapId}/task/${taskId}`, { method: 'PUT' })} onUpdateGoal={(data) => mutate('/api/goals/goal', { method: 'PUT', body: JSON.stringify(data) })} />}
+    {activeTab === 'analytics' && <AnalyticsForecasting analyticsData={analyticsData} />}
+    {activeTab === 'blockchain' && <BlockchainLedger ledgerRecords={ledgerRecords} onVerifyHash={(txHash) => apiFetch('/api/blockchain/verify', { method: 'POST', body: JSON.stringify({ txHash }) })} />}
+    {activeTab === 'profile' && <PersonalizationProfile user={user} tenants={tenants} onUpdateProfile={(data) => mutate('/api/auth/profile', { method: 'PUT', body: JSON.stringify(data) })} onCreateTenant={async (data) => { const result = await mutate('/api/tenants', { method: 'POST', body: JSON.stringify(data) }); setActiveTenantId(String(result._id)); }} />}
+  </main></div>;
 }

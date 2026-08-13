@@ -4,17 +4,10 @@ let isConnected = false;
 
 const connectDB = async () => {
   try {
-    let uri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    if (!uri) throw new Error('MONGODB_URI is not configured. Add a MongoDB connection string to server/.env.');
 
-    if (!uri && process.env.MONGODB_USERNAME && process.env.MONGODB_PASSWORD) {
-      uri = `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@cluster0.i3eqgad.mongodb.net/riseup_db?retryWrites=true&w=majority`;
-    }
-
-    if (!uri) {
-      uri = 'mongodb://127.0.0.1:27017/riseup_financial_manager';
-    }
-
-    console.log(`Connecting to MongoDB Atlas at: ${uri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}...`);
+    console.log(`Connecting to MongoDB at: ${uri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}...`);
 
     const conn = await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 5000,
@@ -26,7 +19,10 @@ const connectDB = async () => {
     return true;
   } catch (error) {
     isConnected = false;
-    console.warn(`⚠️ MongoDB connection warning (${error.message}). Server running with fallback mock engine.`);
+    const hint = error.message.includes('querySrv ECONNREFUSED')
+      ? ' Atlas DNS SRV lookups are blocked. Allow DNS/SRV access to the cluster, or set MONGODB_URI to the standard (non-SRV) connection string from Atlas Connect.'
+      : '';
+    console.warn(`MongoDB connection failed: ${error.message}.${hint}`);
     return false;
   }
 };

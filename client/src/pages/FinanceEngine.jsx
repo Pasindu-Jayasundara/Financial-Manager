@@ -91,7 +91,7 @@ export default function FinanceEngine({ financeData, onAddIncome, onDeleteIncome
               <input
                 type="number"
                 className="form-input"
-                placeholder="Amount ($)"
+                placeholder="Amount (Rs.)"
                 value={incAmount}
                 onChange={(e) => setIncAmount(e.target.value)}
                 required
@@ -134,7 +134,7 @@ export default function FinanceEngine({ financeData, onAddIncome, onDeleteIncome
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ fontWeight: 700, color: 'var(--accent-emerald)', fontSize: '1rem' }}>
-                    +${inc.amount.toLocaleString()}
+                    +Rs. {inc.amount.toLocaleString()}
                   </span>
                   <button className="btn-outline-danger" onClick={() => onDeleteIncome(inc._id)}>
                     <Trash2 size={14} />
@@ -165,7 +165,7 @@ export default function FinanceEngine({ financeData, onAddIncome, onDeleteIncome
               <input
                 type="number"
                 className="form-input"
-                placeholder="Amount ($)"
+                placeholder="Amount (Rs.)"
                 value={expAmount}
                 onChange={(e) => setExpAmount(e.target.value)}
                 required
@@ -214,7 +214,7 @@ export default function FinanceEngine({ financeData, onAddIncome, onDeleteIncome
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ fontWeight: 700, color: 'var(--accent-rose)', fontSize: '1rem' }}>
-                    -${exp.amount.toLocaleString()}
+                    -Rs. {exp.amount.toLocaleString()}
                   </span>
                   <button className="btn-outline-danger" onClick={() => onDeleteExpense(exp._id)}>
                     <Trash2 size={14} />

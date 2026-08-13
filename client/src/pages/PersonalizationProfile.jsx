@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { UserCheck, Building2, HeartPulse, Plus, Check } from 'lucide-react';
 
 export default function PersonalizationProfile({ user, tenants, onUpdateProfile, onCreateTenant }) {
-  const [name, setName] = useState(user?.name || 'Alex Rivera');
-  const [age, setAge] = useState(user?.age || 42);
-  const [medicalConditions, setMedicalConditions] = useState(user?.medicalConditions || ['chronic_condition_high_cost']);
+  const [name, setName] = useState(user?.name || '');
+  const [age, setAge] = useState(user?.age || '');
+  const [medicalConditions, setMedicalConditions] = useState(user?.medicalConditions || []);
   const [newCondition, setNewCondition] = useState('');
   const [profileMsg, setProfileMsg] = useState('');
 

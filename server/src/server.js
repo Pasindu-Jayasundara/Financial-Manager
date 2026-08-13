@@ -1,16 +1,17 @@
+const path = require('path');
 const dotenv = require('dotenv');
-dotenv.config();
+// This local application is configured by server/.env. Override inherited shell
+// values so a stale MONGODB_URI cannot point the app at a different cluster.
+dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true });
 
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
-const { seedDemoDataIfEmpty } = require('./controllers/authController');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// API Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/tenants', require('./routes/tenantRoutes'));
 app.use('/api/finance', require('./routes/financeRoutes'));
@@ -19,35 +20,21 @@ app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/blockchain', require('./routes/blockchainRoutes'));
 
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    service: 'RiseUp Financial Manager Engine',
-    timestamp: new Date()
-  });
-});
-
-const PORT = process.env.PORT || 5000;
-
-connectDB().then(async (connected) => {
-  if (connected) {
-    await seedDemoDataIfEmpty();
-  }
-}).catch(err => {
-  console.log('Skipping MongoDB connection init:', err.message);
-});
+app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'RiseUp Financial Manager Engine', timestamp: new Date() }));
 
 const startServer = (port) => {
-  const server = app.listen(port, () => {
-    console.log(`🚀 RiseUp Financial Manager Server running on port ${port}`);
-  });
-
-  server.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-      console.log(`Port ${port} in use, trying port ${port + 1}...`);
-      startServer(port + 1);
-    }
+  const server = app.listen(port, () => console.log(`RiseUp Financial Manager Server running on port ${port}`));
+  server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') console.error(`Port ${port} is already in use. Stop the existing server or choose another PORT in server/.env.`);
+    else console.error('Server failed to start:', error.message);
+    process.exitCode = 1;
   });
 };
 
-startServer(Number(PORT));
+startServer(Number(process.env.PORT || 5000));
+
+connectDB().then((connected) => {
+  if (!connected) console.warn('API server is running, but database-backed endpoints will return 503 until MongoDB reconnects.');
+}).catch((error) => {
+  console.error('MongoDB initialization failed:', error.message);
+});

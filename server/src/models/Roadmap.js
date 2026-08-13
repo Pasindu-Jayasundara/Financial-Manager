@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const TaskSchema = new mongoose.Schema({
   text: { type: String, required: true },
-  category: { type: String, enum: ['Skill Acquisition', 'Job Application', 'Savings Target', 'Health Buffer'], default: 'Skill Acquisition' },
+  category: { type: String, default: 'Skill Acquisition' },
   completed: { type: Boolean, default: false },
   completedAt: Date
 });
