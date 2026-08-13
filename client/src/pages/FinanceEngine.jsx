@@ -1,7 +1,29 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, ShieldAlert, Check, RefreshCw, DollarSign, PiggyBank, Heart } from 'lucide-react';
 
-export default function FinanceEngine({ financeData, onAddIncome, onDeleteIncome, onAddExpense, onDeleteExpense, onUpdateBudget }) {
+const CATEGORIES = [
+  'Housing',
+  'Healthcare',
+  'Food & Dining',
+  'Transport',
+  'Utilities',
+  'Hobbies & Leisure',
+  'Debt/Loan'
+];
+
+const inferCategory = (title) => {
+  const t = String(title || '').toLowerCase();
+  if (/\b(rent|lease|mortgage|apartment|house|room)\b/i.test(t)) return 'Housing';
+  if (/\b(health|doctor|medicine|hospital|pharmacy|clinic|dental)\b/i.test(t)) return 'Healthcare';
+  if (/\b(bus|train|fuel|petrol|diesel|uber|pickme|cab|taxi|transport|parking)\b/i.test(t)) return 'Transport';
+  if (/\b(wifi|electricity|water|internet|bill|utility|phone|dialog|mobitel)\b/i.test(t)) return 'Utilities';
+  if (/\b(game|movie|cinema|gym|trip|netflix|spotify|hobb(y|ies)|leisure)\b/i.test(t)) return 'Hobbies & Leisure';
+  if (/\b(loan|debt|emi|credit|interest|installment)\b/i.test(t)) return 'Debt/Loan';
+  if (/\b(food|lunch|dinner|breakfast|grocery|groceries|supermarket|restaurant|coffee|cafe|kottu|rice|pizza|burger)\b/i.test(t)) return 'Food & Dining';
+  return 'Food & Dining';
+};
+
+export default function FinanceEngine({ financeData, onAddIncome, onDeleteIncome, onAddExpense, onUpdateExpense, onDeleteExpense, onUpdateBudget }) {
   const incomes = financeData?.incomes || [];
   const expenses = financeData?.expenses || [];
   const budget = financeData?.budget || {
@@ -32,6 +54,13 @@ export default function FinanceEngine({ financeData, onAddIncome, onDeleteIncome
 
   const totalPct = Number(savingsPct) + Number(loansPct) + Number(familyPct) + Number(dailyExpensesPct) + Number(hobbiesPct);
 
+  const handleTitleChange = (e) => {
+    const val = e.target.value;
+    setExpTitle(val);
+    const inferred = inferCategory(val);
+    setExpCategory(inferred);
+  };
+
   const handleIncomeSubmit = (e) => {
     e.preventDefault();
     if (!incSource || !incAmount) return;
@@ -46,6 +75,7 @@ export default function FinanceEngine({ financeData, onAddIncome, onDeleteIncome
     onAddExpense({ title: expTitle, amount: Number(expAmount), category: expCategory });
     setExpTitle('');
     setExpAmount('');
+    setExpCategory('Food & Dining');
   };
 
   const handleSaveBudget = async () => {
@@ -142,6 +172,7 @@ export default function FinanceEngine({ financeData, onAddIncome, onDeleteIncome
                 </div>
               </div>
             ))}
+            {!incomes.length && <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No income sources added yet.</div>}
           </div>
         </div>
 
@@ -156,9 +187,9 @@ export default function FinanceEngine({ financeData, onAddIncome, onDeleteIncome
               <input
                 type="text"
                 className="form-input"
-                placeholder="Expense (e.g. Rent, Health)"
+                placeholder="Expense (e.g. Rent, Health, Bus)"
                 value={expTitle}
-                onChange={(e) => setExpTitle(e.target.value)}
+                onChange={handleTitleChange}
                 required
                 id="expense-title-input"
               />
@@ -179,13 +210,9 @@ export default function FinanceEngine({ financeData, onAddIncome, onDeleteIncome
                 onChange={(e) => setExpCategory(e.target.value)}
                 id="expense-category-select"
               >
-                <option value="Housing">Housing</option>
-                <option value="Healthcare">Healthcare</option>
-                <option value="Food & Dining">Food & Dining</option>
-                <option value="Transport">Transport</option>
-                <option value="Utilities">Utilities</option>
-                <option value="Hobbies & Leisure">Hobbies & Leisure</option>
-                <option value="Debt/Loan">Debt/Loan</option>
+                {CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
               </select>
               <button type="submit" className="btn-primary" style={{ padding: '6px 14px', fontSize: '0.85rem' }} id="add-expense-btn">
                 <Plus size={16} /> Add Expense
@@ -206,12 +233,30 @@ export default function FinanceEngine({ financeData, onAddIncome, onDeleteIncome
                 border: '1px solid var(--bg-card-border)',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
               }}>
-                <div>
-                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{exp.title}</div>
-                  <span className="badge badge-purple" style={{ fontSize: '0.65rem' }}>
-                    {exp.category}
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{exp.title}</div>
+                    <select
+                      value={exp.category}
+                      onChange={(e) => onUpdateExpense && onUpdateExpense(exp._id, { category: e.target.value })}
+                      style={{
+                        fontSize: '0.72rem',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        border: '1px solid #cbd5e1',
+                        background: '#f8fafc',
+                        color: '#334155',
+                        marginTop: '2px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
+
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ fontWeight: 700, color: 'var(--accent-rose)', fontSize: '1rem' }}>
                     -Rs. {exp.amount.toLocaleString()}
@@ -222,6 +267,7 @@ export default function FinanceEngine({ financeData, onAddIncome, onDeleteIncome
                 </div>
               </div>
             ))}
+            {!expenses.length && <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No expense records added yet.</div>}
           </div>
         </div>
       </div>

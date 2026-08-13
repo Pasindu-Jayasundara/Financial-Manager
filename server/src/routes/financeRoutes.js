@@ -5,6 +5,7 @@ const {
   addIncome, 
   deleteIncome, 
   addExpense, 
+  updateExpense,
   deleteExpense, 
   updateBudgetAllocation 
 } = require('../controllers/financeController');
@@ -18,6 +19,7 @@ router.get('/summary', getFinancialSummary);
 router.post('/income', addIncome);
 router.delete('/income/:id', deleteIncome);
 router.post('/expense', addExpense);
+router.put('/expense/:id', updateExpense);
 router.delete('/expense/:id', deleteExpense);
 router.put('/budget', updateBudgetAllocation);
 
