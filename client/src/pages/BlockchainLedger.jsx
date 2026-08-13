@@ -1,15 +1,25 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, ExternalLink, Search, CheckCircle, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, Lock, Search, CheckCircle, AlertTriangle, Copy, Check } from 'lucide-react';
 
 export default function BlockchainLedger({ ledgerRecords, onVerifyHash }) {
   const [searchTxHash, setSearchTxHash] = useState('');
   const [verificationResult, setVerificationResult] = useState(null);
+  const [copiedTx, setCopiedTx] = useState('');
 
-  const handleVerify = async (e) => {
-    e.preventDefault();
-    if (!searchTxHash.trim()) return;
-    const res = await onVerifyHash(searchTxHash.trim());
+  const handleVerify = async (e, hashToVerify) => {
+    if (e) e.preventDefault();
+    const targetHash = hashToVerify || searchTxHash.trim();
+    if (!targetHash) return;
+    const res = await onVerifyHash(targetHash);
     setVerificationResult(res);
+  };
+
+  const handleTxClick = (fullHash) => {
+    setSearchTxHash(fullHash);
+    setCopiedTx(fullHash);
+    navigator.clipboard?.writeText(fullHash);
+    handleVerify(null, fullHash);
+    setTimeout(() => setCopiedTx(''), 3000);
   };
 
   return (
@@ -31,7 +41,7 @@ export default function BlockchainLedger({ ledgerRecords, onVerifyHash }) {
           <input
             type="text"
             className="form-input"
-            placeholder="Paste TxHash (e.g. 0x7a8f...)"
+            placeholder="Paste TxHash (e.g. 0xc8b818a72c7f...)"
             value={searchTxHash}
             onChange={(e) => setSearchTxHash(e.target.value)}
             style={{ fontFamily: 'monospace' }}
@@ -41,6 +51,12 @@ export default function BlockchainLedger({ ledgerRecords, onVerifyHash }) {
             <ShieldCheck size={18} /> Verify On-Chain
           </button>
         </form>
+
+        {copiedTx && (
+          <div style={{ fontSize: '0.78rem', color: 'var(--accent-cyan)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Check size={14} /> Selected TxHash copied & submitted for verification!
+          </div>
+        )}
 
         {verificationResult && (
           <div style={{
@@ -58,7 +74,7 @@ export default function BlockchainLedger({ ledgerRecords, onVerifyHash }) {
               <div style={{ fontWeight: 600, fontSize: '0.92rem' }}>{verificationResult.message}</div>
               {verificationResult.record && (
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px', fontFamily: 'monospace' }}>
-                  Block #{verificationResult.record.blockNumber} | SHA-256 Payload Hash: {verificationResult.record.dataHash.substring(0, 16)}...
+                  Block #{verificationResult.record.blockNumber} | Network: {verificationResult.record.network || 'Polygon Supernets'} | Payload SHA-256: {verificationResult.record.dataHash.substring(0, 16)}...
                 </div>
               )}
             </div>
@@ -79,7 +95,7 @@ export default function BlockchainLedger({ ledgerRecords, onVerifyHash }) {
                 <tr style={{ borderBottom: '1px solid var(--bg-card-border)', color: 'var(--text-muted)' }}>
                   <th style={{ padding: '12px' }}>Timestamp</th>
                   <th style={{ padding: '12px' }}>Record Type</th>
-                  <th style={{ padding: '12px' }}>TxHash</th>
+                  <th style={{ padding: '12px' }}>TxHash (Click to Verify)</th>
                   <th style={{ padding: '12px' }}>Block #</th>
                   <th style={{ padding: '12px' }}>Status</th>
                 </tr>
@@ -93,8 +109,26 @@ export default function BlockchainLedger({ ledgerRecords, onVerifyHash }) {
                     <td style={{ padding: '12px' }}>
                       <span className="badge badge-purple">{r.recordType}</span>
                     </td>
-                    <td style={{ padding: '12px', fontFamily: 'monospace', color: 'var(--accent-cyan)' }}>
-                      {r.txHash.substring(0, 14)}...
+                    <td style={{ padding: '12px' }}>
+                      <button
+                        onClick={() => handleTxClick(r.txHash)}
+                        title="Click to copy & verify full TxHash"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          cursor: 'pointer',
+                          fontFamily: 'monospace',
+                          color: 'var(--accent-cyan)',
+                          textDecoration: 'underline',
+                          fontSize: '0.85rem',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        {r.txHash.substring(0, 14)}... <Copy size={12} />
+                      </button>
                     </td>
                     <td style={{ padding: '12px', color: 'var(--text-primary)' }}>#{r.blockNumber}</td>
                     <td style={{ padding: '12px' }}>
@@ -107,7 +141,7 @@ export default function BlockchainLedger({ ledgerRecords, onVerifyHash }) {
           </div>
         ) : (
           <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem', padding: '20px 0' }}>
-            No milestone records committed on-chain yet. Complete a milestone in Goal & Roadmap tab to trigger automatic blockchain logging!
+            No milestone records committed on-chain yet. Complete a milestone task in the Goal & Roadmap tab to trigger automatic blockchain logging!
           </div>
         )}
       </div>
